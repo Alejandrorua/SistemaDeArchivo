@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Archivo - Ministerio Público</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #E4E3E0; color: #141414; }
+        .grid-line { border: 1px solid #141414; }
+        .data-row:hover { background: #141414; color: #E4E3E0; }
+        .col-header { font-family: 'Georgia', serif; font-style: italic; font-size: 11px; opacity: 0.5; text-transform: uppercase; letter-spacing: 0.05em; }
+        .data-value { font-family: 'JetBrains Mono', monospace; letter-spacing: -0.02em; }
+    </style>
+</head>
+<body class="bg-[#E4E3E0] text-[#141414] min-h-screen">
+    <!-- Pantalla de Login -->
+    <div id="login-screen" class="fixed inset-0 bg-black flex items-center justify-center z-[100]">
+        <div class="bg-[#E4E3E0] border-2 border-white/20 p-8 w-full max-w-md shadow-2xl">
+            <div class="mb-8 text-center">
+                <h1 class="text-3xl font-bold uppercase tracking-tighter mb-2">Ministerio Público</h1>
+                <p class="text-xs opacity-60 uppercase tracking-widest">Sistema de Gestión de Archivo</p>
+            </div>
+            <form onsubmit="login(event)" class="grid gap-6">
+                <div>
+                    <label class="text-[10px] uppercase font-bold mb-1 block opacity-50">Usuario</label>
+                    <input type="text" id="login-user" required class="w-full bg-transparent border-b border-black p-2 focus:outline-none focus:border-blue-600 transition-colors">
+                </div>
+                <div>
+                    <label class="text-[10px] uppercase font-bold mb-1 block opacity-50">Contraseña</label>
+                    <input type="password" id="login-pass" required class="w-full bg-transparent border-b border-black p-2 focus:outline-none focus:border-blue-600 transition-colors">
+                </div>
+                <button type="submit" class="bg-black text-white py-3 font-bold uppercase tracking-widest hover:bg-zinc-800 transition-colors mt-4">Ingresar</button>
+            </form>
+            <p id="login-error" class="text-red-600 text-xs mt-4 text-center hidden"></p>
+        </div>
+    </div>
+
+    <!-- Layout Principal (Sidebar) -->
+    <div id="main-layout" class="hidden flex min-h-screen">
+        <!-- Sidebar Izquierdo -->
+        <aside class="w-64 bg-black text-white flex flex-col border-r border-white/10">
+            <div class="p-6 border-b border-white/10">
+                <h2 class="text-xl font-bold uppercase tracking-tighter">MP Archivo</h2>
+                <p id="user-display" class="text-[10px] opacity-50 mt-1 uppercase"></p>
+            </div>
+            <nav class="flex-1 py-4">
+                <button onclick="showTab('carpetas')" class="nav-link w-full text-left px-6 py-4 hover:bg-white/10 transition-colors flex items-center gap-3">
+                    <span class="w-2 h-2 bg-white rounded-full"></span>
+                    <span class="uppercase text-xs font-bold tracking-widest">Carpetas</span>
+                </button>
+                <button onclick="showTab('prestamos')" class="nav-link w-full text-left px-6 py-4 hover:bg-white/10 transition-colors flex items-center gap-3">
+                    <span class="w-2 h-2 bg-white/30 rounded-full"></span>
+                    <span class="uppercase text-xs font-bold tracking-widest">Préstamos</span>
+                </button>
+                <button onclick="showTab('alertas')" class="nav-link w-full text-left px-6 py-4 hover:bg-white/10 transition-colors flex items-center gap-3">
+                    <span class="w-2 h-2 bg-white/30 rounded-full"></span>
+                    <span class="uppercase text-xs font-bold tracking-widest">Alertas</span>
+                </button>
+                <button onclick="showTab('reportes')" class="nav-link w-full text-left px-6 py-4 hover:bg-white/10 transition-colors flex items-center gap-3">
+                    <span class="w-2 h-2 bg-white/30 rounded-full"></span>
+                    <span class="uppercase text-xs font-bold tracking-widest">Reportes</span>
+                </button>
+            </nav>
+            <div class="p-6 border-t border-white/10">
+                <button onclick="logout()" class="text-[10px] uppercase font-bold opacity-50 hover:opacity-100 transition-opacity">Cerrar Sesión</button>
+            </div>
+        </aside>
+
+        <!-- Contenido Principal -->
+        <div class="flex-1 flex flex-col">
+            <header class="h-16 border-b border-black/10 flex items-center justify-between px-8 bg-white/50 backdrop-blur-sm">
+                <h2 id="current-tab-title" class="text-sm font-bold uppercase tracking-widest italic serif">Carpetas Fiscales</h2>
+                <div id="header-actions" class="flex gap-4">
+                    <!-- Dinámico -->
+                </div>
+            </header>
+
+            <main id="content" class="flex-1 p-8 overflow-y-auto">
+                <!-- Tab: Carpetas -->
+                <section id="tab-carpetas" class="tab-content">
+                    <div class="flex justify-between items-center mb-6">
+                        <div class="flex gap-2">
+                            <input type="text" id="search-input" placeholder="Buscar por número..." class="px-4 py-2 border border-black bg-transparent focus:outline-none w-64 text-sm">
+                            <button onclick="buscarCarpeta()" class="px-6 py-2 bg-black text-white text-xs font-bold uppercase">Buscar</button>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="toggleModal('modal-carga')" class="px-4 py-2 border border-black hover:bg-black hover:text-white transition-colors text-xs font-bold uppercase">Carga Masiva</button>
+                            <button onclick="toggleModal('modal-registro')" class="px-4 py-2 bg-black text-white hover:bg-zinc-800 transition-colors text-xs font-bold uppercase">+ Nueva Carpeta</button>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white border border-black">
+                        <div class="grid grid-cols-6 p-3 col-header border-b border-black bg-zinc-100">
+                            <span>Nro Carpeta</span>
+                            <span>Imputado</span>
+                            <span>Delito</span>
+                            <span>Agraviado</span>
+                            <span>Estado</span>
+                            <span>Ubicación</span>
+                        </div>
+                        <div id="carpetas-list" class="divide-y divide-black/5">
+                            <!-- Data rows -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Tab: Préstamos -->
+                <section id="tab-prestamos" class="tab-content hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold italic serif">Gestión de Préstamos</h2>
+                        <button onclick="toggleModal('modal-prestamo')" class="px-6 py-2 bg-black text-white text-xs font-bold uppercase">+ Generar Préstamo</button>
+                    </div>
+                    <div id="prestamos-list" class="bg-white border border-black p-8 text-center opacity-50 italic">
+                        Módulo de gestión de préstamos activo.
+                    </div>
+                </section>
+
+                <!-- Tab: Alertas -->
+                <section id="tab-alertas" class="tab-content hidden">
+                    <h2 class="text-xl font-bold italic serif mb-6">Alertas de Vencimiento</h2>
+                    <div id="alertas-list" class="grid gap-4">
+                        <!-- Alertas -->
+                    </div>
+                </section>
+
+                <!-- Tab: Reportes -->
+                <section id="tab-reportes" class="tab-content hidden">
+                    <h2 class="text-xl font-bold italic serif mb-6">Reportes y Estadísticas</h2>
+                    <div class="grid grid-cols-2 gap-8">
+                        <div class="bg-white border border-black p-6">
+                            <h3 class="text-[10px] uppercase font-bold opacity-50 mb-4">Préstamos por Dependencia</h3>
+                            <div id="reporte-dependencia" class="divide-y divide-black/5"></div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal: Carga Masiva -->
+    <div id="modal-carga" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4 z-[110]">
+        <div class="bg-[#E4E3E0] border-2 border-black p-8 w-full max-w-md">
+            <h3 class="text-xl font-bold mb-2 italic serif">Carga Masiva de Carpetas</h3>
+            <p class="text-xs opacity-60 mb-6">Suba un archivo CSV con el formato: numero, imputado, delito, agraviado, estado, ubicacion</p>
+            <form onsubmit="subirArchivo(event)" class="grid gap-6">
+                <div class="border-2 border-dashed border-black/20 p-8 text-center">
+                    <input type="file" id="file-input" accept=".csv" required class="hidden">
+                    <label for="file-input" class="cursor-pointer block">
+                        <span class="text-xs font-bold uppercase underline">Seleccionar archivo .csv</span>
+                    </label>
+                </div>
+                <div class="flex justify-end gap-3">
+                    <button type="button" onclick="toggleModal('modal-carga')" class="px-6 py-2 border border-black text-xs font-bold uppercase">Cancelar</button>
+                    <button type="submit" class="px-6 py-2 bg-black text-white text-xs font-bold uppercase">Procesar Carga</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Registro de Carpeta -->
+    <div id="modal-registro" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4">
+        <div class="bg-[#E4E3E0] border-2 border-black p-6 w-full max-w-md">
+            <h3 class="text-lg font-bold mb-4 italic serif">Nueva Carpeta Fiscal</h3>
+            <form id="form-registro" onsubmit="registrarCarpeta(event)" class="grid gap-4">
+                <input type="text" name="numero_carpeta" placeholder="Número de Carpeta" required class="p-2 border border-black bg-transparent">
+                <input type="text" name="imputado" placeholder="Imputado" required class="p-2 border border-black bg-transparent">
+                <input type="text" name="delito" placeholder="Delito" required class="p-2 border border-black bg-transparent">
+                <input type="text" name="agraviado" placeholder="Agraviado" required class="p-2 border border-black bg-transparent">
+                <select name="estado" class="p-2 border border-black bg-transparent">
+                    <option value="Activo">Activo</option>
+                    <option value="Archivado">Archivado</option>
+                </select>
+                <input type="text" name="ubicacion_fisica" placeholder="Ubicación Física" required class="p-2 border border-black bg-transparent">
+                <div class="flex justify-end gap-2 mt-4">
+                    <button type="button" onclick="toggleModal('modal-registro')" class="px-4 py-2 border border-black">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-black text-white">Registrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Generar Préstamo -->
+    <div id="modal-prestamo" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4">
+        <div class="bg-[#E4E3E0] border-2 border-black p-6 w-full max-w-lg">
+            <h3 class="text-lg font-bold mb-4 italic serif">Generar Guía de Préstamo</h3>
+            <form id="form-prestamo" onsubmit="registrarPrestamo(event)" class="grid gap-4">
+                <input type="text" name="guia_numero" placeholder="Nro Guía (ej: PREST-001)" required class="p-2 border border-black bg-transparent">
+                <select name="dependencia_id" id="select-dependencia" required class="p-2 border border-black bg-transparent">
+                    <!-- Options injected here -->
+                </select>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-xs uppercase opacity-50">Fecha Préstamo</label>
+                        <input type="date" name="fecha_prestamo" required class="w-full p-2 border border-black bg-transparent">
+                    </div>
+                    <div>
+                        <label class="text-xs uppercase opacity-50">Plazo (Días)</label>
+                        <input type="number" name="plazo_dias" value="7" required class="w-full p-2 border border-black bg-transparent">
+                    </div>
+                </div>
+                <div class="border border-black p-2">
+                    <label class="text-xs uppercase opacity-50 mb-2 block">Seleccionar Carpetas</label>
+                    <div id="carpetas-selector" class="max-h-40 overflow-y-auto">
+                        <!-- Checkboxes injected here -->
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 mt-4">
+                    <button type="button" onclick="toggleModal('modal-prestamo')" class="px-4 py-2 border border-black">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-black text-white">Generar Guía</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
